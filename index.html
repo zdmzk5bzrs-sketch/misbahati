@@ -26,7 +26,11 @@ body {
 }
 
 body {
-    background: radial-gradient(circle at 50% 30%, #1a3a2e 0%, #0a1a14 100%);
+    background: radial-gradient(
+        circle at 50% 30%,
+        #1a3a2e 0%,
+        #0a1a14 100%
+    );
     color: #f5f0e6;
     touch-action: manipulation;
 }
@@ -37,10 +41,12 @@ body {
     left: 0;
     right: 0;
     bottom: 50px;
+
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+
     cursor: pointer;
     z-index: 1;
 }
@@ -49,9 +55,16 @@ body {
     font-size: clamp(120px, 40vw, 220px);
     font-weight: 200;
     line-height: 1;
+
     color: #f5f0e6;
-    text-shadow: 0 0 60px rgba(212, 175, 105, 0.3);
-    transition: transform 0.06s ease-out, color 0.3s;
+
+    text-shadow:
+        0 0 60px rgba(212, 175, 105, 0.3);
+
+    transition:
+        transform 0.06s ease-out,
+        color 0.3s;
+
     font-variant-numeric: tabular-nums;
 }
 
@@ -75,10 +88,14 @@ body {
     bottom: 70px;
     left: 0;
     right: 0;
+
     text-align: center;
+
     font-size: 14px;
     opacity: 0.35;
+
     transition: opacity 0.5s;
+
     z-index: 2;
 }
 
@@ -88,18 +105,29 @@ body {
 
 #reset {
     position: fixed;
+
     top: 20px;
     left: 20px;
+
     width: 44px;
     height: 44px;
+
     border-radius: 50%;
+
     border: 1px solid rgba(245, 240, 230, 0.15);
+
     background: rgba(245, 240, 230, 0.05);
+
     color: #f5f0e6;
+
     font-size: 20px;
+
     opacity: 0.5;
+
     cursor: pointer;
+
     z-index: 10;
+
     touch-action: manipulation;
 }
 
@@ -109,15 +137,23 @@ body {
 
 #ring {
     position: fixed;
+
     top: 50%;
     left: 50%;
+
     width: 300px;
     height: 300px;
+
     margin: -150px 0 0 -150px;
+
     border-radius: 50%;
+
     border: 1px solid #d4af69;
+
     opacity: 0;
+
     pointer-events: none;
+
     z-index: 3;
 }
 
@@ -139,27 +175,39 @@ body {
 
 #ad-banner {
     position: fixed;
+
     bottom: 0;
     left: 0;
     right: 0;
+
     height: 50px;
+
     background: rgba(0, 0, 0, 0.30);
+
     display: flex;
     align-items: center;
     justify-content: center;
+
     z-index: 20;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+
+    border-top:
+        1px solid rgba(255, 255, 255, 0.05);
+
     overflow: hidden;
 }
 
 #ad-placeholder {
     width: 100%;
     height: 50px;
+
     display: flex;
     align-items: center;
     justify-content: center;
+
     font-size: 12px;
+
     color: #f5f0e6;
+
     opacity: 0.25;
 }
 </style>
@@ -187,6 +235,7 @@ const counterEl = document.getElementById("counter");
 const hintEl = document.getElementById("hint");
 const ringEl = document.getElementById("ring");
 const resetBtn = document.getElementById("reset");
+const stage = document.getElementById("stage");
 
 let count = parseInt(
     localStorage.getItem("tasbih_count") || "0",
@@ -368,10 +417,14 @@ function handleTouch(event) {
         return;
     }
 
+    if (!stage.contains(event.target)) {
+        return;
+    }
+
     tap();
 }
 
-document.addEventListener(
+stage.addEventListener(
     "pointerdown",
     handleTouch,
     {
@@ -442,4 +495,3 @@ document.addEventListener(
 
 </body>
 </html>
-```
