@@ -1,0 +1,446 @@
+```html
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>مسبحتي</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, "SF Arabic", sans-serif;
+}
+
+body {
+    background: radial-gradient(circle at 50% 30%, #1a3a2e 0%, #0a1a14 100%);
+    color: #f5f0e6;
+    touch-action: manipulation;
+}
+
+#stage {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 50px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1;
+}
+
+#counter {
+    font-size: clamp(120px, 40vw, 220px);
+    font-weight: 200;
+    line-height: 1;
+    color: #f5f0e6;
+    text-shadow: 0 0 60px rgba(212, 175, 105, 0.3);
+    transition: transform 0.06s ease-out, color 0.3s;
+    font-variant-numeric: tabular-nums;
+}
+
+#counter.pulse {
+    transform: scale(1.04);
+}
+
+#counter.milestone {
+    color: #d4af69;
+}
+
+#label {
+    margin-top: 20px;
+    font-size: 16px;
+    opacity: 0.5;
+    letter-spacing: 3px;
+}
+
+#hint {
+    position: fixed;
+    bottom: 70px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 14px;
+    opacity: 0.35;
+    transition: opacity 0.5s;
+    z-index: 2;
+}
+
+#hint.hidden {
+    opacity: 0;
+}
+
+#reset {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(245, 240, 230, 0.15);
+    background: rgba(245, 240, 230, 0.05);
+    color: #f5f0e6;
+    font-size: 20px;
+    opacity: 0.5;
+    cursor: pointer;
+    z-index: 10;
+    touch-action: manipulation;
+}
+
+#reset:active {
+    opacity: 1;
+}
+
+#ring {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 300px;
+    height: 300px;
+    margin: -150px 0 0 -150px;
+    border-radius: 50%;
+    border: 1px solid #d4af69;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 3;
+}
+
+#ring.play {
+    animation: ringPulse 0.8s ease-out;
+}
+
+@keyframes ringPulse {
+    0% {
+        opacity: 0.6;
+        transform: scale(0.5);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(1.4);
+    }
+}
+
+#ad-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50px;
+    background: rgba(0, 0, 0, 0.30);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+}
+
+#ad-placeholder {
+    width: 100%;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #f5f0e6;
+    opacity: 0.25;
+}
+</style>
+</head>
+
+<body>
+
+<button id="reset" aria-label="إعادة تعيين">↺</button>
+
+<div id="stage">
+    <div id="counter">0</div>
+    <div id="label">اضغط في أي مكان</div>
+</div>
+
+<div id="ring"></div>
+
+<div id="hint">أغمض عينيك وتابع</div>
+
+<div id="ad-banner">
+    <div id="ad-placeholder">مساحة إعلانية</div>
+</div>
+
+<script>
+const counterEl = document.getElementById("counter");
+const hintEl = document.getElementById("hint");
+const ringEl = document.getElementById("ring");
+const resetBtn = document.getElementById("reset");
+
+let count = parseInt(
+    localStorage.getItem("tasbih_count") || "0",
+    10
+);
+
+counterEl.textContent = count;
+
+let audioCtx = null;
+
+function initAudio() {
+    if (!audioCtx) {
+        const AudioContext =
+            window.AudioContext ||
+            window.webkitAudioContext;
+
+        if (AudioContext) {
+            audioCtx = new AudioContext();
+        }
+    }
+
+    if (
+        audioCtx &&
+        audioCtx.state === "suspended"
+    ) {
+        audioCtx.resume();
+    }
+}
+
+function playTick() {
+    if (!audioCtx) return;
+
+    const t = audioCtx.currentTime;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = "sine";
+
+    osc.frequency.setValueAtTime(880, t);
+
+    osc.frequency.exponentialRampToValueAtTime(
+        1320,
+        t + 0.08
+    );
+
+    gain.gain.setValueAtTime(
+        0.0001,
+        t
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+        0.15,
+        t + 0.01
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        t + 0.25
+    );
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start(t);
+    osc.stop(t + 0.3);
+}
+
+function playMilestone() {
+    if (!audioCtx) return;
+
+    const t = audioCtx.currentTime;
+
+    [440, 660, 880].forEach((freq, i) => {
+        const start = t + i * 0.12;
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = "sine";
+
+        osc.frequency.setValueAtTime(
+            freq,
+            start
+        );
+
+        gain.gain.setValueAtTime(
+            0.0001,
+            start
+        );
+
+        gain.gain.exponentialRampToValueAtTime(
+            0.2,
+            start + 0.02
+        );
+
+        gain.gain.exponentialRampToValueAtTime(
+            0.0001,
+            start + 0.6
+        );
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(start);
+        osc.stop(start + 0.7);
+    });
+}
+
+function vibrate(pattern) {
+    if ("vibrate" in navigator) {
+        try {
+            navigator.vibrate(pattern);
+        } catch (error) {}
+    }
+}
+
+function tap() {
+    initAudio();
+
+    count++;
+
+    counterEl.textContent = count;
+
+    localStorage.setItem(
+        "tasbih_count",
+        count
+    );
+
+    counterEl.classList.remove("pulse");
+
+    void counterEl.offsetWidth;
+
+    counterEl.classList.add("pulse");
+
+    setTimeout(() => {
+        counterEl.classList.remove("pulse");
+    }, 60);
+
+    hintEl.classList.add("hidden");
+
+    if (count % 10 === 0) {
+        playTick();
+        vibrate(15);
+    }
+
+    if (count % 100 === 0) {
+        playMilestone();
+
+        vibrate([
+            30,
+            50,
+            30
+        ]);
+
+        counterEl.classList.add(
+            "milestone"
+        );
+
+        ringEl.classList.remove("play");
+
+        void ringEl.offsetWidth;
+
+        ringEl.classList.add("play");
+
+        setTimeout(() => {
+            counterEl.classList.remove(
+                "milestone"
+            );
+        }, 1500);
+    }
+}
+
+function handleTouch(event) {
+    if (
+        event.target === resetBtn ||
+        resetBtn.contains(event.target)
+    ) {
+        return;
+    }
+
+    tap();
+}
+
+document.addEventListener(
+    "pointerdown",
+    handleTouch,
+    {
+        passive: true
+    }
+);
+
+resetBtn.addEventListener(
+    "pointerdown",
+    (event) => {
+        event.stopPropagation();
+
+        if (
+            confirm(
+                "هل تريد إعادة العداد إلى صفر؟"
+            )
+        ) {
+            count = 0;
+
+            counterEl.textContent = "0";
+
+            localStorage.setItem(
+                "tasbih_count",
+                "0"
+            );
+
+            hintEl.classList.remove(
+                "hidden"
+            );
+
+            counterEl.classList.remove(
+                "milestone"
+            );
+        }
+    }
+);
+
+document.addEventListener(
+    "gesturestart",
+    event => {
+        event.preventDefault();
+    }
+);
+
+document.addEventListener(
+    "dblclick",
+    event => {
+        event.preventDefault();
+    }
+);
+
+document.addEventListener(
+    "visibilitychange",
+    () => {
+        if (!document.hidden) {
+            count = parseInt(
+                localStorage.getItem(
+                    "tasbih_count"
+                ) || "0",
+                10
+            );
+
+            counterEl.textContent = count;
+        }
+    }
+);
+</script>
+
+</body>
+</html>
+```
