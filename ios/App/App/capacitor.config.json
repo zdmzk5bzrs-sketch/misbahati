@@ -1,0 +1,9 @@
+{
+	"appId": "com.zdmzk5bzrs.misbahati",
+	"appName": "Misbahati",
+	"webDir": "www",
+	"ios": {
+		"backgroundColor": "#0f241b"
+	},
+	"packageClassList": []
+}
