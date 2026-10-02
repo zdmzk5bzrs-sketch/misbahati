@@ -773,12 +773,24 @@ body.pull #counter, #lock { touch-action: none; }
     /* ---------- الصوت (نفس الأصوات الأصلية) ---------- */
     var audioCtx = null;
 
+    var audioStale = false;   // يصير true عند الخروج من التطبيق، فنُنشئ محرك صوت جديدًا عند أول لمسة بعد العودة
+
+    function newAudio() {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        try { if (audioCtx && audioCtx.close) { var c = audioCtx.close(); if (c && c.catch) c.catch(function () {}); } } catch (e) {}
+        audioCtx = new AC();
+        audioCtx.onstatechange = function () {
+            // إن قطع النظام الصوت أثناء استخدامنا للتطبيق، نجدّده عند اللمسة القادمة
+            if (audioCtx && audioCtx.state !== "running" && !document.hidden) audioStale = true;
+        };
+    }
+
     function initAudio() {
-        if (!audioCtx) {
-            var AC = window.AudioContext || window.webkitAudioContext;
-            if (AC) audioCtx = new AC();
+        if (!audioCtx || audioCtx.state === "closed" || audioStale) {
+            audioStale = false;
+            newAudio();
         }
-        // iOS قد يوقف الصوت (suspended) أو يقطعه (interrupted)
         if (audioCtx && audioCtx.state !== "running") {
             try { var r = audioCtx.resume(); if (r && r.catch) r.catch(function () {}); } catch (e) {}
         }
@@ -1460,8 +1472,11 @@ body.pull #counter, #lock { touch-action: none; }
     document.addEventListener("gesturestart", function (e) { e.preventDefault(); });
     document.addEventListener("dblclick", function (e) { e.preventDefault(); });
 
+    window.addEventListener("pagehide", function () { audioStale = true; });
+    window.addEventListener("pageshow", function () { audioStale = true; });
+
     document.addEventListener("visibilitychange", function () {
-        if (document.hidden) return;
+        if (document.hidden) { audioStale = true; return; }
         freeCount = parseInt(lsGet(FREE_KEY, "0"), 10) || 0;
         adhkar = loadList();
         noteActivity();
