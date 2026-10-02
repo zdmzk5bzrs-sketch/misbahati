@@ -19,6 +19,10 @@ workflows:
         script: npm ci
       - name: Sync web assets to iOS project
         script: npx cap sync ios
+      - name: iPhone only
+        script: |
+          sed -i '' -E 's/TARGETED_DEVICE_FAMILY = [^;]+;/TARGETED_DEVICE_FAMILY = 1;/g' "$XCODE_PROJECT/project.pbxproj"
+          grep -n "TARGETED_DEVICE_FAMILY" "$XCODE_PROJECT/project.pbxproj"
       - name: Set up code signing
         script: xcode-project use-profiles
       - name: Set build number
