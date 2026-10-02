@@ -652,7 +652,8 @@ body.pull #counter, #lock { touch-action: none; }
     var SET_KEY = "misbahati_settings_v1";
     var EDGE = 40;       // شريط سفلي (قرب مؤشر الـ Home) تُتجاهل فيه اللمسات
     var TOP_EDGE = 56;   // شريط علوي يُتجاهل في وضع السحب (مركز الإشعارات)
-    var STEP = 55;       // مسافة السحب لحبة واحدة
+    var PULL = 35;       // مسافة السحب لأسفل لتُحسب حبة واحدة
+    var BACK = 40;       // مسافة الرجوع لأعلى قبل أن تُحسب السحبة التالية
     var HOLD_MS = 2000;  // مدة الضغط لفتح القفل
 
     var ICON_CHECK = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
@@ -777,7 +778,10 @@ body.pull #counter, #lock { touch-action: none; }
             var AC = window.AudioContext || window.webkitAudioContext;
             if (AC) audioCtx = new AC();
         }
-        if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+        // iOS قد يوقف الصوت (suspended) أو يقطعه (interrupted)
+        if (audioCtx && audioCtx.state !== "running") {
+            try { var r = audioCtx.resume(); if (r && r.catch) r.catch(function () {}); } catch (e) {}
+        }
     }
 
     function playTick() {
@@ -842,8 +846,8 @@ body.pull #counter, #lock { touch-action: none; }
 
     function hapBig() {
         hap("heavy");
-        setTimeout(function () { hap("heavy"); }, 110);
-        setTimeout(function () { hap("heavy"); }, 220);
+        setTimeout(function () { hap("heavy"); }, 120);
+        setTimeout(function () { hap("heavy"); }, 240);
     }
 
     /* ---------- الشاشة الرئيسية ---------- */
@@ -1068,7 +1072,7 @@ body.pull #counter, #lock { touch-action: none; }
         setTimeout(function () { num.classList.remove("pulse"); }, 60);
 
         // اهتزاز مع كل حبة (بدون صوت)، ويقوى عند 10 و100
-        if (n % 10 === 0) { playTick(); hap("medium"); } else { hap("light"); }
+        if (n % 10 === 0) { playTick(); hap("heavy"); } else { hap("light"); }
 
         if (n % 100 === 0 || completed) {
             playMilestone();
@@ -1426,18 +1430,23 @@ body.pull #counter, #lock { touch-action: none; }
         noteActivity();
         if (S.method === "tap") { tap(); return; }
         if (e.clientY < TOP_EDGE) return;
-        drag = { id: e.pointerId, y: e.clientY };
+        drag = { id: e.pointerId, y: e.clientY, low: e.clientY, armed: true };
         try { counterEl.setPointerCapture(e.pointerId); } catch (_) {}
     });
 
     counterEl.addEventListener("pointermove", function (e) {
         if (!drag || e.pointerId !== drag.id || locked) return;
-        var y = e.clientY, n = 0;
-        if (y < drag.y) { drag.y = y; return; } // الرجوع للأعلى لا يُحسب
-        while (y - drag.y >= STEP && n < 3 && performance.now() >= lockUntil) {
-            drag.y += STEP;
-            tap();
-            n++;
+        var y = e.clientY;
+        if (drag.armed) {
+            if (y < drag.y) { drag.y = y; return; }           // أعلى نقطة وصل إليها الإصبع
+            if (y - drag.y >= PULL && performance.now() >= lockUntil) {
+                tap();                                         // سحبة واحدة = حبة واحدة
+                drag.armed = false;
+                drag.low = y;
+            }
+        } else {
+            if (y > drag.low) drag.low = y;                    // أدنى نقطة
+            if (drag.low - y >= BACK) { drag.armed = true; drag.y = y; } // رجع لأعلى: جاهز لسحبة جديدة
         }
         noteActivity();
     });
@@ -1445,6 +1454,8 @@ body.pull #counter, #lock { touch-action: none; }
     ["pointerup", "pointercancel"].forEach(function (n) {
         counterEl.addEventListener(n, function () { drag = null; });
     });
+
+    document.addEventListener("pointerdown", initAudio, true);
 
     document.addEventListener("gesturestart", function (e) { e.preventDefault(); });
     document.addEventListener("dblclick", function (e) { e.preventDefault(); });
